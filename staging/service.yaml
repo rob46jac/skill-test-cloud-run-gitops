@@ -1,0 +1,27 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: nodejs-api-staging
+  annotations:
+    run.googleapis.com/ingress: internal-and-cloud-load-balancing
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "2"
+        autoscaling.knative.dev/maxScale: "20"
+        run.googleapis.com/vpc-access-connector: projects/PROJECT_ID/locations/asia-southeast2/connectors/vpc-connector
+        run.googleapis.com/vpc-access-egress: private-ranges-only
+    spec:
+      serviceAccountName: cloudrun-sa@PROJECT_ID.iam.gserviceaccount.com
+      containers:
+        - image: asia-southeast2-docker.pkg.dev/PROJECT_ID/my-app-repo/nodejs-api:PLACEHOLDER
+          ports:
+            - containerPort: 8080
+          env:
+            - name: NODE_ENV
+              value: staging
+          resources:
+            limits:
+              cpu: "1"
+              memory: 512Mi

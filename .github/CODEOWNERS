@@ -1,0 +1,5 @@
+# Staging and production require infra-team approval
+/production/  @YOUR_GH_ORG/infra-team
+/staging/     @YOUR_GH_ORG/infra-team
+
+# Development can be merged by anyone

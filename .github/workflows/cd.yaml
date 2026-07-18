@@ -1,0 +1,100 @@
+name: CD Deploy
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  REGION: asia-southeast2
+
+jobs:
+
+  # Detect which environment folders changed
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      development: ${{ steps.filter.outputs.development }}
+      staging: ${{ steps.filter.outputs.staging }}
+      production: ${{ steps.filter.outputs.production }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            development: 'development/**'
+            staging: 'staging/**'
+            production: 'production/**'
+
+  # Deploy to development, no approval required
+  deploy-development:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.development == 'true'
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP via WIF
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to Cloud Run (development)
+        run: |
+          gcloud run services replace development/service.yaml \
+            --region=${{ env.REGION }} \
+            --project=${{ vars.GCP_PROJECT_ID }}
+
+  # Deploy to staging, requires infra-team approval
+  deploy-staging:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.staging == 'true'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP via WIF
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to Cloud Run (staging)
+        run: |
+          gcloud run services replace staging/service.yaml \
+            --region=${{ env.REGION }} \
+            --project=${{ vars.GCP_PROJECT_ID }}
+
+  # Deploy to production, requires infra-team approval
+  deploy-production:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.production == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP via WIF
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to Cloud Run (production)
+        run: |
+          gcloud run services replace production/service.yaml \
+            --region=${{ env.REGION }} \
+            --project=${{ vars.GCP_PROJECT_ID }}

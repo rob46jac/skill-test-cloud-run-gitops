@@ -1,0 +1,29 @@
+name: Validate PR
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Block multi-environment changes in a single PR
+        run: |
+          FILES=$(git diff --name-only origin/main HEAD)
+          echo "Changed files:"
+          echo "$FILES"
+
+          ENVS=$(echo "$FILES" | grep -oE '^(development|staging|production)/' | sort -u | wc -l)
+
+          if [ "$ENVS" -gt 1 ]; then
+            echo "ERROR: This PR modifies more than one environment at once."
+            echo "Please split into separate PRs per environment."
+            exit 1
+          fi
+
+          echo "OK: PR targets a single environment."
