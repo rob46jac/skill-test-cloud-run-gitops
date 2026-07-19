@@ -1,0 +1,46 @@
+name: Promote Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Image tag (commit SHA)'
+        required: true
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options: [development, staging, production]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update service.yaml and open PR
+        run: |
+          IMAGE="asia-southeast2-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/my-app-repo/nodejs-api:${{ inputs.tag }}"
+          BRANCH="promote/${{ inputs.environment }}/${{ inputs.tag }}"
+
+          git config user.name "ci-bot"
+          git config user.email "ci-bot@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+
+          sed -i "s|image:.*|image: $IMAGE|" "${{ inputs.environment }}/service.yaml"
+
+          git add "${{ inputs.environment }}/service.yaml"
+          git commit -m "promote ${{ inputs.environment }} to ${{ inputs.tag }}"
+          git push origin "$BRANCH"
+
+          gh pr create \
+            --title "promote ${{ inputs.environment }} to ${{ inputs.tag }}" \
+            --body "Updates ${{ inputs.environment }} to image tag ${{ inputs.tag }}." \
+            --base main \
+            --head "$BRANCH"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -2,7 +2,7 @@
 
 GitOps repository for managing Cloud Run service configurations across environments.
 
-Each environment (development, staging, production) has its own folder with a `service.yaml` that defines the Cloud Run service spec. To deploy, edit the file in the target environment folder and open a pull request.
+Each environment (development, staging, production) has its own folder with a `service.yaml` that defines the Cloud Run service spec. To deploy, go to Actions, run the "Promote Image" workflow, and fill in the image tag and target environment. The workflow will open a PR with the updated service.yaml automatically.
 
 PRs that touch more than one environment at once will be rejected by the validation check. Changes per environment must go through separate PRs. Staging and production also require approval from `infra-team` before merge, enforced via CODEOWNERS.
 
